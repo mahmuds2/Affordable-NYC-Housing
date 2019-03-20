@@ -5,13 +5,13 @@ import os
 
 app = Flask(__name__)
 client = Socrata("data.cityofnewyork.us", None)
-gmaps_token = os.environ['GOOGLEMAPS']
+gmaps_token = os.environ['GOOGLE_MAPS_TOKEN']
 
 @app.route('/')
 def map():
     polygons = draw_neighborhoods()
 
-    return render_template('index.html', polygons=polygons, gmaps_token=token)
+    return render_template('index.html', polygons=polygons, gmaps_token=gmaps_token)
 
 def draw_neighborhoods():
     '''
