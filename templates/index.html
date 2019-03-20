@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Fusion Tables Heatmaps</title>
+    <style>
+      /* Always set the map height explicitly to define the size of the div
+       * element that contains the map. */
+      #map {
+        height: 100%;
+      }
+      /* Optional: Makes the sample page fill the window. */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+          center: {lat: 40.7609, lng: -73.9780},
+          zoom: 12
+        });
+
+        // Define the LatLng coordinates for the polygon's path.
+        var polygons = {{ polygons | safe }};
+
+        // iterate through all polygons
+        for (var i = 0; i < polygons.length; i++) {
+          var all_coords = [];
+
+          // iterate through one polygon's coords
+          for (var c = 0; c < polygons[i].length; c++) {
+            //var latlong = new google.maps.LatLng(polygons[i][c][0].toFixed(3), polygons[i][c][1].toFixed(3))
+            all_coords[c] = {lat: polygons[i][c][1], lng: polygons[i][c][0]};
+          }
+
+          all_coords[c] = {lat: polygons[i][0][1], lng: polygons[i][0][0]};
+
+          var polygon_shape = new google.maps.Polygon({
+            paths: all_coords,
+            strokeColor: '#FF0000',
+            strokeOpacity: 0.5,
+            strokeWeight: 2,
+            fillColor: '#FF0000',
+            fillOpacity: 0.3
+          });
+
+          polygon_shape.setMap(map);
+
+          console.log("done");
+        }
+      }
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key={{ token | safe}}&callback=initMap">
+    </script>
+  </body>
+</html>
