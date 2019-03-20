@@ -3,7 +3,7 @@
   <head>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
-    <title>Fusion Tables Heatmaps</title>
+    <title>NYC Housing Info</title>
     <style>
       /* Always set the map height explicitly to define the size of the div
        * element that contains the map. */
@@ -21,27 +21,33 @@
   <body>
     <div id="map"></div>
     <script>
+
+    var map;
+    var infoWindow;
+
       function initMap() {
-        var map = new google.maps.Map(document.getElementById('map'), {
+        map = new google.maps.Map(document.getElementById('map'), {
           center: {lat: 40.7609, lng: -73.9780},
           zoom: 12
         });
 
-        // Define the LatLng coordinates for the polygon's path.
-        var polygons = {{ polygons | safe }};
+        var polygons = {{polygons | safe}}
 
-        // iterate through all polygons
-        for (var i = 0; i < polygons.length; i++) {
+        // Define the LatLng coordinates for the polygon's path.
+        {% for ntaname, neighborhood_coords in polygons.items() %}
+          var ntacode = "{{ neighborhoods[ntaname] | safe }}";
+          var ntaname = "{{ ntaname | safe}}";
+          var coords = {{neighborhood_coords | safe}};
           var all_coords = [];
 
+          console.log("{{ntaname}}");
+
           // iterate through one polygon's coords
-          for (var c = 0; c < polygons[i].length; c++) {
-            //var latlong = new google.maps.LatLng(polygons[i][c][0].toFixed(3), polygons[i][c][1].toFixed(3))
-            all_coords[c] = {lat: polygons[i][c][1], lng: polygons[i][c][0]};
+          for (var i = 0; i < coords.length; i++) {
+            all_coords[i] = {lat: coords[i][1], lng: coords[i][0]};
           }
 
-          all_coords[c] = {lat: polygons[i][0][1], lng: polygons[i][0][0]};
-
+          // create neighborhood polygon
           var polygon_shape = new google.maps.Polygon({
             paths: all_coords,
             strokeColor: '#FF0000',
@@ -51,11 +57,32 @@
             fillOpacity: 0.3
           });
 
+          // add polygon to map
           polygon_shape.setMap(map);
+          polygon_shape.addListener('click', function(e) {
+            showArrays(e, ntaname, ntacode)
+          });
 
-          console.log("done");
-        }
+        infoWindow = new google.maps.InfoWindow;
+
+        {% endfor %}
       }
+
+      /** @this {google.maps.Polygon} */
+      function showArrays(event, ntaname, ntacode) {
+        // Since this polygon has only one path, we can call getPath() to return the
+        // MVCArray of LatLngs.
+
+        var contentString = '<p><b>' + ntaname + '</b><br>' + ntacode + '</p>';
+
+
+        // Replace the info window's content and position.
+        infoWindow.setContent(contentString);
+        infoWindow.setPosition(event.latLng);
+
+        infoWindow.open(map);
+      }
+
     </script>
     <script async defer
     src="//maps.googleapis.com/maps/api/js?key={{gmaps_token}}&callback=initMap" type="text/javascript" ></script>
