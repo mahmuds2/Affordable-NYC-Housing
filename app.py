@@ -5,7 +5,6 @@ import os
 
 app = Flask(__name__)
 client = Socrata("data.cityofnewyork.us", None)
-os.environ['GOOGLE_MAPS_TOKEN'] = 'AIzaSyCURuWskR8P6SzSh5ZkmOClArbPEVLvpDk'
 gmaps_token = os.environ['GOOGLE_MAPS_TOKEN']
 
 @app.route('/')
