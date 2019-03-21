@@ -21,9 +21,7 @@
   <body>
     <div id="map"></div>
     <script>
-
     var map;
-    var infoWindow;
 
       function initMap() {
         map = new google.maps.Map(document.getElementById('map'), {
@@ -31,18 +29,19 @@
           zoom: 12
         });
 
+        //  coordinates of all neighborhoods
         var polygons = {{polygons | safe}}
 
-        // Define the LatLng coordinates for the polygon's path.
+        // Define the LatLng coordinates for one neighborhood's path.
         {% for ntaname, neighborhood_coords in polygons.items() %}
-          var ntacode = "{{ neighborhoods[ntaname] | safe }}";
-          var ntaname = "{{ ntaname | safe}}";
+          var nta = {
+            ntacode: "{{ neighborhoods[ntaname] | safe }}",
+            ntaname: "{{ ntaname | safe }}"
+          }
           var coords = {{neighborhood_coords | safe}};
           var all_coords = [];
 
-          console.log("{{ntaname}}");
-
-          // iterate through one polygon's coords
+          // iterate through one polygon's coords and set each coord into LatLng object
           for (var i = 0; i < coords.length; i++) {
             all_coords[i] = {lat: coords[i][1], lng: coords[i][0]};
           }
@@ -54,28 +53,25 @@
             strokeOpacity: 0.5,
             strokeWeight: 2,
             fillColor: '#FF0000',
-            fillOpacity: 0.3
+            fillOpacity: 0.3,
+            nta: nta
           });
 
-          // add polygon to map
+          var infoWindow;
+
+          // add polygon to map and add listenier
           polygon_shape.setMap(map);
           polygon_shape.addListener('click', function(e) {
-            showArrays(e, ntaname, ntacode)
+            showNta(e, infoWindow, this.nta);
           });
 
-        infoWindow = new google.maps.InfoWindow;
-
+          // initialize listener
+          infoWindow = new google.maps.InfoWindow;
         {% endfor %}
       }
 
-      /** @this {google.maps.Polygon} */
-      function showArrays(event, ntaname, ntacode) {
-        // Since this polygon has only one path, we can call getPath() to return the
-        // MVCArray of LatLngs.
-
-        var contentString = '<p><b>' + ntaname + '</b><br>' + ntacode + '</p>';
-
-
+      function showNta(event, infoWindow, nta) {
+        var contentString = '<p><b>' + nta.ntaname + '</b><br>' + nta.ntacode + '</p>';
         // Replace the info window's content and position.
         infoWindow.setContent(contentString);
         infoWindow.setPosition(event.latLng);
@@ -85,6 +81,7 @@
 
     </script>
     <script async defer
-    src="//maps.googleapis.com/maps/api/js?key={{gmaps_token}}&callback=initMap" type="text/javascript" ></script>
+    src="//maps.googleapis.com/maps/api/js?key={{gmaps_token}}&callback=initMap"
+    type="text/javascript" ></script>
   </body>
 </html>
