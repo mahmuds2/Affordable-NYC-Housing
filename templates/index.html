@@ -72,7 +72,7 @@
 
       function showNta(event, infoWindow, nta) {
         var contentString = '<p><b>' + nta.ntaname + '</b><br>' + nta.ntacode + '</p>';
-        // Replace the info window's content and position.
+        // Replace the info window's content with nta name and nta code
         infoWindow.setContent(contentString);
         infoWindow.setPosition(event.latLng);
 
