@@ -2,7 +2,7 @@ from flask import Flask, render_template
 from sodapy import Socrata
 import googlemaps
 import pandas as pd
-import requests
+import json
 import os
 
 app = Flask(__name__)
@@ -14,23 +14,28 @@ gmaps = googlemaps.Client(key=gmaps_token)
 def map():
     # get information on all ntas and nycha buildings
     ntas = client.get("q2z5-ai38")
-    nycha = client.get("evjd-dqpz", limit=2,
-        select="location_street_a, location_street_b, location_street_c, location_street_d, borough")
+    affordable_units = client.get("hg8x-zxpr", select="project_id, " +
+        "neighborhood_tabulation_area, extremely_low_income_units," +
+        "very_low_income_units, low_income_units",
+        where="extremely_low_income_units > 0 OR very_low_income_units > 0" +
+        "OR low_income_units > 0")
 
-    print("nycha:" + str(nycha))
-    get_building_nta(nycha)
+    print(affordable_units)
 
     # Convert to pandas DataFrame
     ntas_df = pd.DataFrame.from_records(ntas)
 
-    polygons = draw_neighborhoods(ntas_df)
+    # data for polygons and information related to each polygon
+    polygons = get_all_polygons(ntas_df)
     neighborhoods = get_neighborhood_info(ntas_df)
 
     return render_template('index.html', polygons=polygons,
                                         neighborhoods=neighborhoods,
+                                        affordable_units=affordable_units,
                                         gmaps_token=gmaps_token)
 
-def draw_neighborhoods(results):
+
+def get_all_polygons(results):
     '''
     Parameter Type: Pandas DataFrame
     Information of all ntas in NYC
@@ -75,17 +80,3 @@ def get_polygon(neighborhood_coords):
         path.append([coord[0], coord[1]])
 
     return path
-
-def get_building_nta(address):
-    '''
-    Parameter Types: String
-    Building address
-
-    Return: String
-    NTA code of building
-    '''
-    # get latitude and longtitude of Building
-    geocode_result = gmaps.geocode(address)
-
-    for building_info in geocode_result:
-        print(str(building_info['formatted_address']), str(building_info['geometry']['location']) + '\n')

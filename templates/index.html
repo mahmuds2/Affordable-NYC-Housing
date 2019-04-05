@@ -32,11 +32,15 @@
         //  coordinates of all neighborhoods
         var polygons = {{polygons | safe}}
 
+        // all affordable units
+        var units = {{ affordable_units | safe }};
+
         // Define the LatLng coordinates for one neighborhood's path.
         {% for ntaname, neighborhood_coords in polygons.items() %}
           var nta = {
             ntacode: "{{ neighborhoods[ntaname] | safe }}",
-            ntaname: "{{ ntaname | safe }}"
+            ntaname: "{{ ntaname | safe }}",
+            units: 0
           }
           var coords = {{neighborhood_coords | safe}};
           var all_coords = [];
@@ -62,7 +66,7 @@
           // add polygon to map and add listenier
           polygon_shape.setMap(map);
           polygon_shape.addListener('click', function(e) {
-            showNta(e, infoWindow, this.nta);
+            showNta(e, infoWindow, this.nta, units);
           });
 
           // initialize listener
@@ -70,13 +74,28 @@
         {% endfor %}
       }
 
-      function showNta(event, infoWindow, nta) {
-        var contentString = '<p><b>' + nta.ntaname + '</b><br>' + nta.ntacode + '</p>';
+      function showNta(event, infoWindow, nta, units) {
+        console.log(nta);
+        nta.units = getAffordableUnitsInNta(nta, units);
+
+        var contentString = '<p><b>' + nta.ntaname + '</b><br>' + nta.ntacode +
+        '</b><br>' + nta.units + '</p>';
         // Replace the info window's content with nta name and nta code
         infoWindow.setContent(contentString);
         infoWindow.setPosition(event.latLng);
 
         infoWindow.open(map);
+      }
+
+      function getAffordableUnitsInNta(nta, units) {
+        var unitsInNta = 0;
+        for (var i = 0; i < units.length; i++) {
+          console.log(units[i]);
+          if (units[i].neighborhood_tabulation_area === nta.code) {
+            unitsInNta++;
+          }
+        }
+        return unitsInNta;
       }
 
     </script>
