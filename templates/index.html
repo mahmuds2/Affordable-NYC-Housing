@@ -29,6 +29,7 @@
           zoom: 12
         });
 
+
         //  coordinates of all neighborhoods
         var polygons = {{polygons | safe}}
 
@@ -52,15 +53,28 @@
           // create neighborhood polygon
           var polygon_shape = new google.maps.Polygon({
             paths: all_coords,
-            strokeColor: '#FF0000',
-            strokeOpacity: 0.4,
+            strokeColor: '#a8a8a8',
+            strokeOpacity: 0,
             strokeWeight: 2,
-            fillColor: '#FF0000',
+            fillColor: '#a8a8a8',
             fillOpacity: 0,
             ntacode: ntacode,
             ntaname: ntaname,
             ntaunits: getAffordableUnitsInNta(ntacode, units)
           });
+
+          // creating basic colormap based on number of units in neighborhoods
+
+
+          if (polygon_shape.ntaunits == 0) {
+            //polygon_shape.strokeOpacity = 0.8;
+            polygon_shape.fillOpacity = 0.4;
+          } else {
+            polygon_shape.strokeColor = '#f44542';
+            polygon_shape.strokeOpacity = polygon_shape.ntaunits/75 + 0.5;
+            polygon_shape.fillColor = '#f44542';
+            polygon_shape.fillOpacity = polygon_shape.ntaunits/75 + 0.2;
+          }
 
           var infoWindow;
 
