@@ -37,11 +37,10 @@
 
         // Define the LatLng coordinates for one neighborhood's path.
         {% for ntaname, neighborhood_coords in polygons.items() %}
-          var nta = {
-            ntacode: "{{ neighborhoods[ntaname] | safe }}",
-            ntaname: "{{ ntaname | safe }}",
-            units: 0
-          }
+          var ntacode = "{{ neighborhoods[ntaname] | safe }}";
+          var ntaname = "{{ ntaname | safe }}";
+          var ntaunits = 0;
+
           var coords = {{neighborhood_coords | safe}};
           var all_coords = [];
 
@@ -54,11 +53,13 @@
           var polygon_shape = new google.maps.Polygon({
             paths: all_coords,
             strokeColor: '#FF0000',
-            strokeOpacity: 0.5,
+            strokeOpacity: 0.4,
             strokeWeight: 2,
             fillColor: '#FF0000',
-            fillOpacity: 0.3,
-            nta: nta
+            fillOpacity: 0,
+            ntacode: ntacode,
+            ntaname: ntaname,
+            ntaunits: getAffordableUnitsInNta(ntacode, units)
           });
 
           var infoWindow;
@@ -66,7 +67,7 @@
           // add polygon to map and add listenier
           polygon_shape.setMap(map);
           polygon_shape.addListener('click', function(e) {
-            showNta(e, infoWindow, this.nta, units);
+            showNta(e, infoWindow, this);
           });
 
           // initialize listener
@@ -74,12 +75,10 @@
         {% endfor %}
       }
 
-      function showNta(event, infoWindow, nta, units) {
-        console.log(nta);
-        nta.units = getAffordableUnitsInNta(nta, units);
+      function showNta(event, infoWindow, polygon) {
 
-        var contentString = '<p><b>' + nta.ntaname + '</b><br>' + nta.ntacode +
-        '</b><br>' + nta.units + '</p>';
+        var contentString = '<p><b>' + polygon.ntaname + '</b><br>' +
+          polygon.ntacode + '</b><br> Affordable Units: ' + polygon.ntaunits + '</p>';
         // Replace the info window's content with nta name and nta code
         infoWindow.setContent(contentString);
         infoWindow.setPosition(event.latLng);
@@ -87,14 +86,15 @@
         infoWindow.open(map);
       }
 
-      function getAffordableUnitsInNta(nta, units) {
+      function getAffordableUnitsInNta(ntacode, units) {
         var unitsInNta = 0;
+
         for (var i = 0; i < units.length; i++) {
-          console.log(units[i]);
-          if (units[i].neighborhood_tabulation_area === nta.code) {
+          if (units[i].neighborhood_tabulation_area === ntacode && units[i].neighborhood_tabulation_area != null) {
             unitsInNta++;
           }
         }
+
         return unitsInNta;
       }
 
