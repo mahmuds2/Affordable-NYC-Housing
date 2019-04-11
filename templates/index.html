@@ -87,11 +87,10 @@
 
       // info window to show nta name, code, and num of affordable units
       function showNta(event, infoWindow, polygon) {
-        var contentString = '<p><b>' + polygon.ntaname + '</b><br>'
-                              + polygon.ntacode + '<br>Low Income Units: '
-                              + polygon.ntaunits['Low Income Units'] + '<br>Very Low Income Units: '
-                              + polygon.ntaunits['Very Low Income Units'] + '<br>Extremely Low Income Units: '
-                              + '</p>';
+        var contentString = '<p><b>' + polygon.ntaname + ' | ' + polygon.ntacode + '</b><br>' +
+                              'Low Income Units: ' + polygon.ntaunits['Low Income Units'] + '<br>' +
+                              'Very Low Income Units: ' + polygon.ntaunits['Very Low Income Units'] + '<br>' +
+                              'Extremely Low Income Units: ' + '</p>';
 
         // Replace the info window's content with nta name and nta code
         infoWindow.setContent(contentString);
