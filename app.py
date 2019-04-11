@@ -20,8 +20,6 @@ def map():
         where="extremely_low_income_units > 0 OR very_low_income_units > 0" +
         "OR low_income_units > 0")
 
-    print(affordable_units)
-
     # Convert to pandas DataFrame
     ntas_df = pd.DataFrame.from_records(ntas)
 
@@ -41,7 +39,7 @@ def get_all_polygons(results):
     Information of all ntas in NYC
 
     Return: Dictionary
-    Coordinates of all ntas, where key is name and value is array of nta's coordinate path
+    Dictionary containing coordinates of all ntas, where key is nta name and value is array of nta's coordinate path
     '''
 
     polygons = {}
@@ -57,7 +55,7 @@ def get_neighborhood_info(results):
     Set of information of all ntas in NYC
 
     Return Type: Dictionary
-    All nta names and values, where key is name and values are codes
+    Dictionary of nta names and values, where key is name and values are codes
     '''
     neighborhoods = {}
 
@@ -80,3 +78,7 @@ def get_polygon(neighborhood_coords):
         path.append([coord[0], coord[1]])
 
     return path
+
+def get_nta_housing_vio(nta_name):
+    housing_vios = client.get("b2iz-pps8", select="CurrentStatus, ViolationStatus" +
+        "Class, nta, ")

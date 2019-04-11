@@ -29,7 +29,6 @@
           zoom: 12
         });
 
-
         //  coordinates of all neighborhoods
         var polygons = {{polygons | safe}}
 
@@ -64,16 +63,13 @@
           });
 
           // creating basic colormap based on number of units in neighborhoods
-
-
-          if (polygon_shape.ntaunits == 0) {
-            //polygon_shape.strokeOpacity = 0.8;
+          if (polygon_shape.ntaunits["Total Affordable Units"] == 0) {
             polygon_shape.fillOpacity = 0.4;
           } else {
             polygon_shape.strokeColor = '#f44542';
-            polygon_shape.strokeOpacity = polygon_shape.ntaunits/75 + 0.5;
+            polygon_shape.strokeOpacity = polygon_shape.ntaunits["Total Affordable Units"]/75 + 0.5;
             polygon_shape.fillColor = '#f44542';
-            polygon_shape.fillOpacity = polygon_shape.ntaunits/75 + 0.2;
+            polygon_shape.fillOpacity = polygon_shape.ntaunits["Total Affordable Units"]/75 + 0.2;
           }
 
           var infoWindow;
@@ -89,10 +85,14 @@
         {% endfor %}
       }
 
+      // info window to show nta name, code, and num of affordable units
       function showNta(event, infoWindow, polygon) {
+        var contentString = '<p><b>' + polygon.ntaname + '</b><br>'
+                              + polygon.ntacode + '<br>Low Income Units: '
+                              + polygon.ntaunits['Low Income Units'] + '<br>Very Low Income Units: '
+                              + polygon.ntaunits['Very Low Income Units'] + '<br>Extremely Low Income Units: '
+                              + '</p>';
 
-        var contentString = '<p><b>' + polygon.ntaname + '</b><br>' +
-          polygon.ntacode + '</b><br> Affordable Units: ' + polygon.ntaunits + '</p>';
         // Replace the info window's content with nta name and nta code
         infoWindow.setContent(contentString);
         infoWindow.setPosition(event.latLng);
@@ -101,15 +101,32 @@
       }
 
       function getAffordableUnitsInNta(ntacode, units) {
-        var unitsInNta = 0;
+        /*
+          Parameter: String, Array []
+          NTA Code, array containing affordable units in all NTAs
+
+          Return: Dict
+          Dictionary containing number of low, very low, and extremely low income units of nta
+        */
+
+        var dict = new Object();
+        dict["NTA Code"] = ntacode;
+        dict["Low Income Units"] = 0;
+        dict["Extremely Low Income Units"] = 0;
+        dict["Very Low Income Units"] = 0;
 
         for (var i = 0; i < units.length; i++) {
           if (units[i].neighborhood_tabulation_area === ntacode && units[i].neighborhood_tabulation_area != null) {
-            unitsInNta++;
+            dict["Low Income Units"] += parseInt(units[i].low_income_units);
+            dict["Very Income Units"] += parseInt(units[i].very_low_income_units);
+            dict["Extremely Income Units"] += parseInt(units[i].extremely_low_income_units);
+
+            i = units.length;
           }
         }
 
-        return unitsInNta;
+        dict["Total Affordable Units"] = dict["Low Income Units"] + dict["Extremely Low Income Units"] + dict["Very Low Income Units"];
+        return dict;
       }
 
     </script>
