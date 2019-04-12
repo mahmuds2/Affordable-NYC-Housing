@@ -7,19 +7,7 @@
 
     <!-- Compiled and minified CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-    <style>
-      /* Always set the map height explicitly to define the size of the div
-       * element that contains the map. */
-      #map {
-        height: 100%;
-      }
-      /* Optional: Makes the sample page fill the window. */
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-      }
-    </style>
+    <link rel="stylesheet" href="../static/css/style.css">
   </head>
   <body>
     <!-- Header/Navbar (will use links to help navigate btw more upcoming features) -->
@@ -33,12 +21,13 @@
 
     <!-- Hidden sidebar that will contain more info about affordable units -->
     <ul id="slide-out" class="sidenav">
-        <li><a class="sidenav-close" href="#!">Clicking this will close Sidenav</a></li>
     </ul>
 
     <!-- Container for Map -->
     <div id="map"></div>
 
+
+    <!----- BEGIN JAVASCRIPT CODE ---->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <!-- Map functionalities in JavaScript -->
     <script>
@@ -47,7 +36,7 @@
       $('.sidenav').sidenav();
     });
 
-    // Observing CSS changes in sidebar to adjust map accordingly. Needs to be done better. 
+    // Observing CSS changes in sidebar to adjust map accordingly. Needs to be done better.
     var observer = new MutationObserver(function(mutations) {
     	mutations.forEach(function(mutation) {
     		if (mutation.target.firstChild.parentElement.style.transform === "translateX(-105%)") {
@@ -119,37 +108,16 @@
           polygon_shape.fillOpacity = 0.4;
         }
 
-        var infoWindow;
-
         // add polygon to map and add listenier
         polygon_shape.setMap(map);
-        polygon_shape.addListener('click', function(e) {
-          showNta(e, infoWindow, this);
-        });
 
         polygon_shape.addListener('click', function(e) {
           zoomIntoPolygon(e, this, map);
           adjustSideBar(e, this);
         })
-
-        // initialize listener
-        infoWindow = new google.maps.InfoWindow;
       {% endfor %}
     }
 
-    // info window to show nta name, code, and num of affordable units
-    function showNta(event, infoWindow, polygon) {
-      var contentString = '<p><b>' + polygon.ntaname + ' | ' + polygon.ntacode + '</b><br>' +
-                            'Low Income Units: ' + polygon.ntaunits['Low Income Units'] + '<br>' +
-                            'Very Low Income Units: ' + polygon.ntaunits['Very Low Income Units'] + '<br>' +
-                            'Extremely Low Income Units: ' + '</p>';
-
-      // Replace the info window's content with nta name and nta code
-      infoWindow.setContent(contentString);
-      infoWindow.setPosition(event.latLng);
-
-      infoWindow.open(map);
-    }
 
     function zoomIntoPolygon(event, polygon, map) {
       map.fitBounds(polygon.bounds);
@@ -157,21 +125,26 @@
 
     // open sidebar containing nta information and adjust map width
     function adjustSideBar(event, polygon) {
+      $('#slide-out').empty();
+
+      var sidebarContent = '<div class="container">' +
+                          '<h4>' + polygon.ntaname + "</br>" + polygon.ntacode +
+                          "</h4><h6>Low Income Units: " + polygon.ntaunits["Low Income Units"] +
+                          "</br>Very Low Income Units: " + polygon.ntaunits['Very Low Income Units'] +
+                          "</br>Extremely Low Income Units: " + polygon.ntaunits['Extremely Low Income Units'] + "</h6></div>";
+
+      $('.sidenav').append(sidebarContent);
       $('.sidenav').sidenav('open');
 
       var sidenavTranslate = $('.sidenav').css('transform');
 
-      if (sidenavTranslate === "matrix(1, 0, 0, 1, -315, 0)") {
-        $('#map').width("100%");
-      } else {
-        var width = $('.sidenav').width();
-        var parentWidth = $('.sidenav').offsetParent().width();
-        var newMapWidth = 100 - 100*width/parentWidth;
+      var width = $('.sidenav').width();
+      var parentWidth = $('.sidenav').offsetParent().width();
+      var newMapWidth = 100 - 100*width/parentWidth;
 
-        $('#map').width(newMapWidth.toString() + "%");
-        $('#map').css("right", 0);
-        $('#map').css("position", "fixed");
-      }
+      $('#map').width(newMapWidth.toString() + "%");
+      $('#map').css("right", 0);
+      $('#map').css("position", "fixed");
     }
 
     function getAffordableUnitsInNta(ntacode, units) {
