@@ -43,10 +43,12 @@
 
           var coords = {{neighborhood_coords | safe}};
           var all_coords = [];
+          var bounds = new google.maps.LatLngBounds();
 
-          // iterate through one polygon's coords and set each coord into LatLng object
+          // iterate through one polygon's coords and set each coord into LatLng object and add to bounds
           for (var i = 0; i < coords.length; i++) {
             all_coords[i] = {lat: coords[i][1], lng: coords[i][0]};
+            bounds.extend(all_coords[i]);
           }
 
           // create neighborhood polygon
@@ -59,7 +61,8 @@
             fillOpacity: 0,
             ntacode: ntacode,
             ntaname: ntaname,
-            ntaunits: getAffordableUnitsInNta(ntacode, units)
+            ntaunits: getAffordableUnitsInNta(ntacode, units),
+            bounds: bounds
           });
 
           // creating basic colormap based on number of units in neighborhoods
@@ -67,9 +70,9 @@
             polygon_shape.fillOpacity = 0.4;
           } else {
             polygon_shape.strokeColor = '#f44542';
-            polygon_shape.strokeOpacity = polygon_shape.ntaunits["Total Affordable Units"]/75 + 0.5;
+            polygon_shape.strokeOpacity = 0.5;
             polygon_shape.fillColor = '#f44542';
-            polygon_shape.fillOpacity = polygon_shape.ntaunits["Total Affordable Units"]/75 + 0.2;
+            polygon_shape.fillOpacity = 0.4;
           }
 
           var infoWindow;
@@ -79,6 +82,10 @@
           polygon_shape.addListener('click', function(e) {
             showNta(e, infoWindow, this);
           });
+
+          polygon_shape.addListener('click', function(e) {
+            zoomIntoPolygon(e, this, map);
+          })
 
           // initialize listener
           infoWindow = new google.maps.InfoWindow;
@@ -97,6 +104,10 @@
         infoWindow.setPosition(event.latLng);
 
         infoWindow.open(map);
+      }
+
+      function zoomIntoPolygon(event, polygon, map) {
+        map.fitBounds(polygon.bounds);
       }
 
       function getAffordableUnitsInNta(ntacode, units) {
@@ -118,7 +129,7 @@
           if (units[i].neighborhood_tabulation_area === ntacode && units[i].neighborhood_tabulation_area != null) {
             dict["Low Income Units"] += parseInt(units[i].low_income_units);
             dict["Very Income Units"] += parseInt(units[i].very_low_income_units);
-            dict["Extremely Income Units"] += parseInt(units[i].extremely_low_income_units);
+            dict["Extremely Low Income Units"] += parseInt(units[i].extremely_low_income_units);
 
             i = units.length;
           }
