@@ -32,7 +32,7 @@
     </nav>
 
     <!-- Hidden sidebar that will contain more info about affordable units -->
-    <ul id="slide-out" class="sidenav info-sidenav">
+    <ul id="slide-out" class="sidenav">
         <li><a class="sidenav-close" href="#!">Clicking this will close Sidenav</a></li>
     </ul>
 
@@ -40,9 +40,31 @@
     <div id="map"></div>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <script src="../static/js/housingdata.js"></script>
     <!-- Map functionalities in JavaScript -->
     <script>
+    // Create sidebar object
+    $(document).ready(function(){
+      $('.sidenav').sidenav();
+    });
+
+    // Observing CSS changes in sidebar to adjust map accordingly. Needs to be done better. 
+    var observer = new MutationObserver(function(mutations) {
+    	mutations.forEach(function(mutation) {
+    		if (mutation.target.firstChild.parentElement.style.transform === "translateX(-105%)") {
+          $('#map').width("100%");
+        }});
+    });
+
+    var observerConfig = {
+    	attributes: true,
+      attributeOldValue: true,
+      attributeFilter: ['style'],
+    	characterData: true
+    };
+
+    var targetNode = document.getElementById("slide-out");
+    observer.observe(targetNode, observerConfig);
+
     var map;
 
     function initMap() {
@@ -133,15 +155,23 @@
       map.fitBounds(polygon.bounds);
     }
 
+    // open sidebar containing nta information and adjust map width
     function adjustSideBar(event, polygon) {
       $('.sidenav').sidenav('open');
-      var width = $('.sidenav').width();
-      var parentWidth = $('.sidenav').offsetParent().width();
-      var newMapWidth = 100 - 100*width/parentWidth;
 
-      $('#map').width(newMapWidth.toString() + "%");
-      $('#map').css("right", 0);
-      $('#map').css("position", "fixed");
+      var sidenavTranslate = $('.sidenav').css('transform');
+
+      if (sidenavTranslate === "matrix(1, 0, 0, 1, -315, 0)") {
+        $('#map').width("100%");
+      } else {
+        var width = $('.sidenav').width();
+        var parentWidth = $('.sidenav').offsetParent().width();
+        var newMapWidth = 100 - 100*width/parentWidth;
+
+        $('#map').width(newMapWidth.toString() + "%");
+        $('#map').css("right", 0);
+        $('#map').css("position", "fixed");
+      }
     }
 
     function getAffordableUnitsInNta(ntacode, units) {
