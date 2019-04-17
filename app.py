@@ -26,10 +26,12 @@ def map():
     # data for polygons and information related to each polygon
     polygons = get_all_polygons(ntas_df)
     neighborhoods = get_neighborhood_info(ntas_df)
+    violations = get_housing_vio()
 
     return render_template('index.html', polygons=polygons,
                                         neighborhoods=neighborhoods,
                                         affordable_units=affordable_units,
+                                        violations=violations,
                                         gmaps_token=gmaps_token)
 
 
@@ -79,6 +81,11 @@ def get_polygon(neighborhood_coords):
 
     return path
 
-def get_nta_housing_vio(nta_name):
-    housing_vios = client.get("b2iz-pps8", select="CurrentStatus, ViolationStatus" +
-        "Class, nta, ")
+def get_housing_vio():
+    '''
+    Return type: Array of JSON objects
+    '''
+    housing_vios = client.get("b2iz-pps8", select="nta, buildingid, latitude, longitude, class",
+                            where="violationstatus = 'Open'")
+
+    return housing_vios

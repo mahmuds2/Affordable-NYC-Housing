@@ -50,12 +50,19 @@
       $('.sidenav').sidenav();
     });
 
+    var map;
+    var markersOnMap = [];
+    var defaultMapPosition = {lat: 40.7609, long: -73.9780};
+
     // Observing CSS changes in sidebar to adjust map accordingly. Needs to be done better.
     var observer = new MutationObserver(function(mutations) {
     	mutations.forEach(function(mutation) {
     		if (mutation.target.firstChild.parentElement.style.transform === "translateX(-105%)") {
           $('#map').width("100%");
-        }});
+          clearMarkers();
+          resetMap();
+        }
+      });
     });
 
     var observerConfig = {
@@ -68,15 +75,14 @@
     var targetNode = document.getElementById("slide-out");
     observer.observe(targetNode, observerConfig);
 
-    var map;
-
     function initMap() {
+
       map = new google.maps.Map(document.getElementById('map'), {
         center: {lat: 40.7609, lng: -73.9780},
         zoom: 12
       });
 
-      //  coordinates of all neighborhoods
+      // coordinates of all neighborhoods
       var polygons = {{polygons | safe}}
 
       // all affordable units
@@ -86,7 +92,7 @@
       {% for ntaname, neighborhood_coords in polygons.items() %}
         var ntacode = "{{ neighborhoods[ntaname] | safe }}";
         var ntaname = "{{ ntaname | safe }}";
-        var ntaunits = 0;
+        var ntaViolations = {{ violations | safe }};
 
         var coords = {{neighborhood_coords | safe}};
         var all_coords = [];
@@ -109,7 +115,8 @@
           ntacode: ntacode,
           ntaname: ntaname,
           ntaunits: getAffordableUnitsInNta(ntacode, units),
-          bounds: bounds
+          bounds: bounds,
+          violations: getViolationsinNta(ntaViolations, ntaname)
         });
 
         // creating basic colormap based on number of units in neighborhoods
@@ -132,22 +139,58 @@
       {% endfor %}
     }
 
-
     function zoomIntoPolygon(event, polygon, map) {
       map.fitBounds(polygon.bounds);
+
+      for (var i = 0; i < polygon.violations["A"].length; i++) {
+        var marker = new google.maps.Marker({
+          position: {lat: parseFloat(polygon.violations["A"][i].latitude),
+                      lng: parseFloat(polygon.violations["A"][i].longitude)},
+          map: map,
+          title: 'A'
+        });
+
+        markersOnMap.push(marker);
+      }
+
+      for (var i = 0; i < polygon.violations["B"].length; i++) {
+        var marker = new google.maps.Marker({
+          position: {lat: parseFloat(polygon.violations["B"][i].latitude),
+                      lng: parseFloat(polygon.violations["B"][i].longitude)},
+          map: map,
+          title: 'B'
+        });
+
+        markersOnMap.push(marker);
+      }
+
+      for (var i = 0; i < polygon.violations["C"].length; i++) {
+        var marker = new google.maps.Marker({
+          position: {lat: parseFloat(polygon.violations["C"][i].latitude),
+                      lng: parseFloat(polygon.violations["C"][i].longitude)},
+          map: map,
+          title: 'C'
+        });
+
+        markersOnMap.push(marker);
+      }
     }
 
     // open sidebar containing nta information and adjust map width
     function adjustSideBar(event, polygon) {
       $('#slide-out').empty();
 
-      var sidebarContent = '<div class="container">' +
-                          '<h4>' + polygon.ntaname + "</br>" + polygon.ntacode +
-                          "</h4><h6>Low Income Units: " + polygon.ntaunits["Low Income Units"] +
+      var ntaInfo = '<div class="container">' +
+                          '<h4>' + polygon.ntaname + "</br>" + polygon.ntacode + "</h4>";
+      var unitInfo = "<h6>Low Income Units: " + polygon.ntaunits["Low Income Units"] +
                           "</br>Very Low Income Units: " + polygon.ntaunits['Very Low Income Units'] +
-                          "</br>Extremely Low Income Units: " + polygon.ntaunits['Extremely Low Income Units'] + "</h6></div>";
+                          "</br>Extremely Low Income Units: " + polygon.ntaunits['Extremely Low Income Units'] + "</h6>";
 
-      $('.sidenav').append(sidebarContent);
+      var violationInfo = "<h6>Class A Violations: " + polygon.violations["A"].length +
+                          "</br>Class B Violations: " + polygon.violations["B"].length +
+                          "</br>Class C Violations: " + polygon.violations["C"].length + "</h6></div>"
+
+      $('.sidenav').append(ntaInfo + unitInfo + violationInfo);
       $('.sidenav').sidenav('open');
 
       var sidenavTranslate = $('.sidenav').css('transform');
@@ -166,7 +209,7 @@
         Parameter: String, Array []
         NTA Code, array containing affordable units in all NTAs
 
-        Return: Dict
+        Return: Dictionary
         Dictionary containing number of low, very low, and extremely low income units of nta
       */
 
@@ -175,6 +218,7 @@
       dict["Low Income Units"] = 0;
       dict["Extremely Low Income Units"] = 0;
       dict["Very Low Income Units"] = 0;
+      dict["Unit Coordinates"] = [];
 
       for (var i = 0; i < units.length; i++) {
         if (units[i].neighborhood_tabulation_area === ntacode && units[i].neighborhood_tabulation_area != null) {
@@ -189,10 +233,51 @@
       dict["Total Affordable Units"] = dict["Low Income Units"] + dict["Extremely Low Income Units"] + dict["Very Low Income Units"];
       return dict;
     }
+
+    function getViolationsinNta(violations, ntaname) {
+      /*
+        Parameter: Array of JSON objects, toString
+
+        Return: Dictionary
+        Dictionary containing housing violations in NTA by class (A, B, or C)
+      */
+
+      var dict = new Object();
+      dict["ntaname"] = ntaname;
+      dict["A"] = [];
+      dict["B"] = [];
+      dict["C"] = [];
+
+      for (var i = 0; i < violations.length; i++) {
+        if (violations[i].nta === ntaname) {
+          if (violations[i].class === "A") {
+            dict["A"].push(violations[i]);
+          } else if (violations[i].class === "B") {
+            dict["B"].push(violations[i]);
+          } else {
+            dict["C"].push(violations[i]);
+          }
+        }
+      }
+
+      return dict;
+    }
+
+    function clearMarkers() {
+      for (var i = 0; i < markersOnMap.length; i++) {
+        markersOnMap[i].setMap(null);
+      }
+    }
+
+    function resetMap() {
+      map.setCenter(new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long));
+      map.setZoom(12);
+    }
+
     </script>
     <script async defer
     src="//maps.googleapis.com/maps/api/js?key={{gmaps_token}}&callback=initMap"
-    type="text/javascript" ></script>
+    type="text/javascript"></script>
 
     <!-- Compiled and minified JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
