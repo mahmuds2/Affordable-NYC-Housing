@@ -52,7 +52,8 @@
 
     var map;
     var markersOnMap = [];
-    var defaultMapPosition = {lat: 40.7609, long: -73.9780};
+    var defaultMapPosition = {lat: 40.713054, long: -74.007228};
+    var defaultZoom = 11;
 
     // Observing CSS changes in sidebar to adjust map accordingly. Needs to be done better.
     var observer = new MutationObserver(function(mutations) {
@@ -78,8 +79,8 @@
     function initMap() {
 
       map = new google.maps.Map(document.getElementById('map'), {
-        center: {lat: 40.7609, lng: -73.9780},
-        zoom: 12
+        center: new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long),
+        zoom: defaultZoom
       });
 
       // coordinates of all neighborhoods
@@ -271,7 +272,7 @@
 
     function resetMap() {
       map.setCenter(new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long));
-      map.setZoom(12);
+      map.setZoom(defaultZoom);
     }
 
     </script>
