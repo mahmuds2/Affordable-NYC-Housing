@@ -34,7 +34,7 @@
     </nav>
 
     <!-- Hidden sidebar that will contain more info about affordable units -->
-    <ul id="slide-out" class="sidenav">
+    <ul id="slide-out" class="sidenav sidenav-fixed">
     </ul>
 
     <!-- Container for Map -->
@@ -51,30 +51,24 @@
     });
 
     var map;
-    var markersOnMap = [];
+    var violationMarkersOnMap = [];
+    var unitMarkersOnMap = [];
     var defaultMapPosition = {lat: 40.713054, long: -74.007228};
-    var defaultZoom = 11;
-
-    // Observing CSS changes in sidebar to adjust map accordingly. Needs to be done better.
-    var observer = new MutationObserver(function(mutations) {
-    	mutations.forEach(function(mutation) {
-    		if (mutation.target.firstChild.parentElement.style.transform === "translateX(-105%)") {
-          $('#map').width("100%");
-          clearMarkers();
-          resetMap();
-        }
-      });
-    });
-
-    var observerConfig = {
-    	attributes: true,
-      attributeOldValue: true,
-      attributeFilter: ['style'],
-    	characterData: true
+    var defaultZoom = 10.8;
+    var onPolygon = false;
+    var icons = {
+      building: 'https://img.icons8.com/color/48/000000/city.png',
+      violation: 'https://img.icons8.com/color/48/000000/error.png'
     };
 
-    var targetNode = document.getElementById("slide-out");
-    observer.observe(targetNode, observerConfig);
+    document.getElementById("map").onclick = function() {
+      if (onPolygon == true) {
+        onPolygon = false;
+        resetMap();
+      } else {
+        onPolygon = true;
+      }
+    }
 
     function initMap() {
 
@@ -98,6 +92,11 @@
         var coords = {{neighborhood_coords | safe}};
         var all_coords = [];
         var bounds = new google.maps.LatLngBounds();
+
+        if (ntacode === 'MN34' || ntacode === 'BX39') {
+          console.log(ntacode);
+          console.log(coords);
+        }
 
         // iterate through one polygon's coords and set each coord into LatLng object and add to bounds
         for (var i = 0; i < coords.length; i++) {
@@ -143,15 +142,21 @@
     function zoomIntoPolygon(event, polygon, map) {
       map.fitBounds(polygon.bounds);
 
+      showViolationOnMap(polygon, map);
+      showUnitsOnMap(polygon, map);
+    }
+
+    function showViolationOnMap(polygon, map) {
       for (var i = 0; i < polygon.violations["A"].length; i++) {
         var marker = new google.maps.Marker({
           position: {lat: parseFloat(polygon.violations["A"][i].latitude),
                       lng: parseFloat(polygon.violations["A"][i].longitude)},
           map: map,
+          icon: icons["violation"],
           title: 'A'
         });
 
-        markersOnMap.push(marker);
+        violationMarkersOnMap.push(marker);
       }
 
       for (var i = 0; i < polygon.violations["B"].length; i++) {
@@ -159,10 +164,11 @@
           position: {lat: parseFloat(polygon.violations["B"][i].latitude),
                       lng: parseFloat(polygon.violations["B"][i].longitude)},
           map: map,
+          icon: icons["violation"],
           title: 'B'
         });
 
-        markersOnMap.push(marker);
+        violationMarkersOnMap.push(marker);
       }
 
       for (var i = 0; i < polygon.violations["C"].length; i++) {
@@ -170,16 +176,29 @@
           position: {lat: parseFloat(polygon.violations["C"][i].latitude),
                       lng: parseFloat(polygon.violations["C"][i].longitude)},
           map: map,
+          icon: icons["violation"],
           title: 'C'
         });
 
-        markersOnMap.push(marker);
+        violationMarkersOnMap.push(marker);
+      }
+    }
+
+    function showUnitsOnMap(polygon, map) {
+      for (var i = 0; i < polygon.ntaunits["Unit Coordinates"].length; i++) {
+        var marker = new google.maps.Marker({
+          position: {lat: parseFloat(polygon.ntaunits["Unit Coordinates"][i].lat),
+                      lng: parseFloat(polygon.ntaunits["Unit Coordinates"][i].long)},
+          map: map,
+          icon: icons["building"],
+        });
+        unitMarkersOnMap.push(marker);
       }
     }
 
     // open sidebar containing nta information and adjust map width
     function adjustSideBar(event, polygon) {
-      $('#slide-out').empty();
+      $('.sidenav-fixed').empty();
 
       var ntaInfo = '<div class="container">' +
                           '<h4>' + polygon.ntaname + "</br>" + polygon.ntacode + "</h4>";
@@ -226,8 +245,7 @@
           dict["Low Income Units"] += parseInt(units[i].low_income_units);
           dict["Very Income Units"] += parseInt(units[i].very_low_income_units);
           dict["Extremely Low Income Units"] += parseInt(units[i].extremely_low_income_units);
-
-          i = units.length;
+          dict["Unit Coordinates"].push({lat: units[i].latitude, long: units[i].longitude});
         }
       }
 
@@ -264,13 +282,17 @@
       return dict;
     }
 
-    function clearMarkers() {
-      for (var i = 0; i < markersOnMap.length; i++) {
-        markersOnMap[i].setMap(null);
-      }
-    }
-
     function resetMap() {
+      $('.sidenav-fixed').empty();
+
+      for (var i = 0; i < violationMarkersOnMap.length; i++) {
+        violationMarkersOnMap[i].setMap(null);
+      }
+
+      for (var i = 0; i < unitMarkersOnMap.length; i++) {
+        unitMarkersOnMap[i].setMap(null);
+      }
+
       map.setCenter(new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long));
       map.setZoom(defaultZoom);
     }

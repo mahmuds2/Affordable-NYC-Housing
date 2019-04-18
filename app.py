@@ -16,7 +16,7 @@ def map():
     ntas = client.get("q2z5-ai38")
     affordable_units = client.get("hg8x-zxpr", select="project_id, " +
         "neighborhood_tabulation_area, extremely_low_income_units," +
-        "very_low_income_units, low_income_units",
+        "very_low_income_units, low_income_units, latitude, longitude",
         where="extremely_low_income_units > 0 OR very_low_income_units > 0" +
         "OR low_income_units > 0")
 

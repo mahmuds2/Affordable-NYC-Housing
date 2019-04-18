@@ -13,3 +13,7 @@ html, body {
 .sidenav-overlay {
   opacity: 0;
 }
+
+#slide-out {
+  margin-left: 10%;
+}
