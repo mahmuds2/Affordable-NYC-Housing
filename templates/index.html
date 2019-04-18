@@ -78,7 +78,7 @@
       });
 
       // coordinates of all neighborhoods
-      var polygons = {{polygons | safe}}
+      var polygons = {{ polygons | safe }}
 
       // all affordable units
       var units = {{ affordable_units | safe }};
@@ -90,52 +90,54 @@
         var ntaViolations = {{ violations | safe }};
 
         var coords = {{neighborhood_coords | safe}};
-        var all_coords = [];
-        var bounds = new google.maps.LatLngBounds();
 
-        if (ntacode === 'MN34' || ntacode === 'BX39') {
-          console.log(ntacode);
-          console.log(coords);
+        // go through each polygon associated with NTA
+        for (var p = 0; p < coords.length; p++) {
+
+          var all_coords = [];
+          var bounds = new google.maps.LatLngBounds();
+
+          // each coordinate in polygon
+          for (var i = 0; i < coords[p].length; i++) {
+            all_coords.push({lat: parseFloat(coords[p][i][0]), lng: parseFloat(coords[p][i][1])});
+            bounds.extend(all_coords[i]);
+          }
+
+          // create neighborhood polygon
+          var polygon_shape = new google.maps.Polygon({
+            paths: all_coords,
+            strokeColor: '#a8a8a8',
+            strokeOpacity: 0,
+            strokeWeight: 2,
+            fillColor: '#a8a8a8',
+            fillOpacity: 0,
+            ntacode: ntacode,
+            ntaname: ntaname,
+            ntaunits: getAffordableUnitsInNta(ntacode, units),
+            bounds: bounds,
+            violations: getViolationsinNta(ntaViolations, ntaname)
+          });
+
+          // creating basic colormap based on affordable units in neighborhoods
+          if (polygon_shape.ntaunits["Total Affordable Units"] == 0) {
+            polygon_shape.fillOpacity = 0.4;
+          } else {
+            polygon_shape.strokeColor = '#f44542';
+            polygon_shape.strokeOpacity = 0.5;
+            polygon_shape.fillColor = '#f44542';
+            polygon_shape.fillOpacity = 0.4;
+          }
+
+          // add polygon to map and add listenier
+          polygon_shape.setMap(map);
+
+          polygon_shape.addListener('click', function(e) {
+            zoomIntoPolygon(e, this, map);
+            adjustSideBar(e, this);
+          });
+
         }
 
-        // iterate through one polygon's coords and set each coord into LatLng object and add to bounds
-        for (var i = 0; i < coords.length; i++) {
-          all_coords[i] = {lat: coords[i][1], lng: coords[i][0]};
-          bounds.extend(all_coords[i]);
-        }
-
-        // create neighborhood polygon
-        var polygon_shape = new google.maps.Polygon({
-          paths: all_coords,
-          strokeColor: '#a8a8a8',
-          strokeOpacity: 0,
-          strokeWeight: 2,
-          fillColor: '#a8a8a8',
-          fillOpacity: 0,
-          ntacode: ntacode,
-          ntaname: ntaname,
-          ntaunits: getAffordableUnitsInNta(ntacode, units),
-          bounds: bounds,
-          violations: getViolationsinNta(ntaViolations, ntaname)
-        });
-
-        // creating basic colormap based on number of units in neighborhoods
-        if (polygon_shape.ntaunits["Total Affordable Units"] == 0) {
-          polygon_shape.fillOpacity = 0.4;
-        } else {
-          polygon_shape.strokeColor = '#f44542';
-          polygon_shape.strokeOpacity = 0.5;
-          polygon_shape.fillColor = '#f44542';
-          polygon_shape.fillOpacity = 0.4;
-        }
-
-        // add polygon to map and add listenier
-        polygon_shape.setMap(map);
-
-        polygon_shape.addListener('click', function(e) {
-          zoomIntoPolygon(e, this, map);
-          adjustSideBar(e, this);
-        })
       {% endfor %}
     }
 

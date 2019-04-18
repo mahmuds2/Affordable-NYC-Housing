@@ -72,14 +72,21 @@ def get_polygon(neighborhood_coords):
     All nta coordinates in NYC in format [longitude, latitude]
 
     Return Type: Array
-    Array of tuples containing coordinate path of ntas in format [latitude, longitude]
+    Array of arrays containing tuples of coordinate path of ntas in format [latitude, longitude]
     '''
-    path = []
 
-    for coord in neighborhood_coords[0][0]:
-        path.append([coord[0], coord[1]])
+    all_polygons = []
 
-    return path
+    print(".......")
+    for polygon in neighborhood_coords:
+        path = []
+
+        for coord in polygon[0]:
+            path.append([coord[1], coord[0]])
+
+        all_polygons.append(path)
+
+    return all_polygons
 
 def get_housing_vio():
     '''
