@@ -11,7 +11,7 @@ gmaps_token = os.environ['GOOGLE_MAPS_TOKEN']
 gmaps = googlemaps.Client(key=gmaps_token)
 
 @app.route('/')
-def map():
+def affordable_units_map():
     # get information on all ntas and nycha buildings
     ntas = client.get("q2z5-ai38")
     affordable_units = client.get("hg8x-zxpr", select="project_id, " +
@@ -24,7 +24,7 @@ def map():
     ntas_df = pd.DataFrame.from_records(ntas)
 
     # data for polygons and information related to each polygon
-    polygons = get_all_polygons(ntas_df)
+    polygons = get_all_neighborhoods(ntas_df)
     neighborhoods = get_neighborhood_info(ntas_df)
     violations = get_housing_vio()
 
@@ -34,14 +34,51 @@ def map():
                                         violations=violations,
                                         gmaps_token=gmaps_token)
 
+@app.route('/nycha')
+def nycha_map():
+    # Get information on all ntas and nycha buildings
+    ntas_df = pd.DataFrame.from_records(client.get("q2z5-ai38"))
 
-def get_all_polygons(results):
+    # data for polygons and information related to each polygon
+    polygons = get_all_neighborhoods(ntas_df)
+    neighborhoods = get_neighborhood_info(ntas_df)
+    development = get_nycha_developments()
+
+    return render_template('nycha.html', polygons=polygons,
+                                        neighborhoods=neighborhoods,
+                                        gmaps_token=gmaps_token)
+
+
+
+def get_polygon(coordinates):
+    '''
+    Parameter Type: Column of Pandas Dictionary, String
+     - All polygon coordinates in format [longitude, latitude]
+     - String specifying what coordinates draw
+
+    Return Type: Array
+     - Array of arrays containing tuples of coordinate path of polygon in format [latitude, longitude]
+    '''
+
+    all_polygons = []
+
+    for polygon in coordinates:
+        path = []
+
+        for coord in polygon[0]:
+            path.append([coord[1], coord[0]])
+
+        all_polygons.append(path)
+
+    return all_polygons
+
+def get_all_neighborhoods(results):
     '''
     Parameter Type: Pandas DataFrame
-    Information of all ntas in NYC
+     - Information of all ntas in NYC
 
     Return: Dictionary
-    Dictionary containing coordinates of all ntas, where key is nta name and value is array of nta's coordinate path
+     - Dictionary containing coordinates of all ntas, where key is nta name and value is array of nta's coordinate path
     '''
 
     polygons = {}
@@ -54,10 +91,10 @@ def get_all_polygons(results):
 def get_neighborhood_info(results):
     '''
     Parameter Type: Pandas DataFrame
-    Set of information of all ntas in NYC
+     - Set of information of all ntas in NYC
 
     Return Type: Dictionary
-    Dictionary of nta names and values, where key is name and values are codes
+     - Dictionary of nta names and values, where key is name and values are codes
     '''
     neighborhoods = {}
 
@@ -66,27 +103,19 @@ def get_neighborhood_info(results):
 
     return neighborhoods
 
-def get_polygon(neighborhood_coords):
-    '''
-    Parameter Type: Column of Pandas Dictionary
-    All nta coordinates in NYC in format [longitude, latitude]
 
-    Return Type: Array
-    Array of arrays containing tuples of coordinate path of ntas in format [latitude, longitude]
+def get_nycha_developments():
+    '''
+    Return Type: Dictionary
+     - Dictionary where key is TDS Number and value is array of arrays with coordinates of developments
     '''
 
-    all_polygons = []
+    results = client.get("5j2e-zhmb")
 
-    print(".......")
-    for polygon in neighborhood_coords:
-        path = []
+    developments = {}
 
-        for coord in polygon[0]:
-            path.append([coord[1], coord[0]])
-
-        all_polygons.append(path)
-
-    return all_polygons
+    for development in results:
+        developments[development["tds_num"]] = get_polygon(development["the_geom"]["coordinates"])
 
 def get_housing_vio():
     '''

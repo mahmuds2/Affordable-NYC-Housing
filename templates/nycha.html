@@ -1,0 +1,111 @@
+{% extends "map.html" %}
+{% block body %}
+<!-- Map functionalities in JavaScript -->
+<script>
+
+// Create sidebar object
+$(document).ready(function(){
+  $('.sidenav').sidenav();
+});
+
+var map;
+var defaultMapPosition = {lat: 40.713054, long: -74.007228};
+var defaultZoom = 10.8;
+var onPolygon = false;
+var icons = {
+  violation: 'https://img.icons8.com/color/48/000000/error.png'
+};
+
+document.getElementById("map").onclick = function() {
+  if (onPolygon == true) {
+    onPolygon = false;
+    resetMap();
+  } else {
+    onPolygon = true;
+  }
+}
+
+function initMap() {
+
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long),
+    zoom: defaultZoom
+  });
+
+  // coordinates of all neighborhoods
+  var polygons = {{ polygons | safe }}
+  var units = [];
+
+  // Define the LatLng coordinates for one neighborhood's path(s).
+  {% for ntaname, neighborhood_coords in polygons.items() %}
+    var ntacode = "{{ neighborhoods[ntaname] | safe }}";
+    var ntaname = "{{ ntaname | safe }}";
+
+    var coords = {{neighborhood_coords | safe}};
+
+    // go through each polygon associated with NTA
+    for (var p = 0; p < coords.length; p++) {
+
+      var all_coords = [];
+      var bounds = new google.maps.LatLngBounds();
+
+      // each coordinate in polygon
+      for (var i = 0; i < coords[p].length; i++) {
+        all_coords.push({lat: parseFloat(coords[p][i][0]), lng: parseFloat(coords[p][i][1])});
+        bounds.extend(all_coords[i]);
+      }
+
+      // create neighborhood polygon
+      var polygon_shape = new google.maps.Polygon({
+        paths: all_coords,
+        strokeColor: '#f44542',
+        strokeOpacity: 0.5,
+        strokeWeight: 2,
+        fillColor: '#f44542',
+        fillOpacity: 0.4,
+        ntacode: ntacode,
+        ntaname: ntaname,
+        bounds: bounds,
+      });
+
+      // add polygon to map and add listenier
+      polygon_shape.setMap(map);
+
+      polygon_shape.addListener('click', function(e) {
+        zoomIntoPolygon(e, this, map);
+        adjustSideBar(e, this);
+      });
+
+    }
+
+  {% endfor %}
+}
+
+function zoomIntoPolygon(event, polygon, map) {
+  map.fitBounds(polygon.bounds);
+}
+
+// open sidebar containing nta information and adjust map width
+function adjustSideBar(event, polygon) {
+  $('.sidenav-fixed').empty();
+
+  var sidenavTranslate = $('.sidenav').css('transform');
+
+  var width = $('.sidenav').width();
+  var parentWidth = $('.sidenav').offsetParent().width();
+  var newMapWidth = 100 - 100*width/parentWidth;
+
+  $('#map').width(newMapWidth.toString() + "%");
+  $('#map').css("right", 0);
+  $('#map').css("position", "fixed");
+}
+
+function resetMap() {
+  $('.sidenav-fixed').empty();
+
+  map.setCenter(new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long));
+  map.setZoom(defaultZoom);
+}
+
+</script>
+{% endblock %}

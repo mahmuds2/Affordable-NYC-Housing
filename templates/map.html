@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>NYCHA Housing Info</title>
+
+    <!-- Compiled and minified CSS -->
+    <style>
+    #map {
+      height: 94%;
+    }
+    /* Optional: Makes the sample page fill the window. */
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .sidenav-overlay {
+      opacity: 0;
+    }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+  </head>
+  <body>
+    <!-- Header/Navbar (will use links to help navigate btw more upcoming features) -->
+    <nav class="light-blue lighten-1" role="navigation">
+      <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo">Logo</a>
+        <ul class="right hide-on-med-and-down">
+          <li><a href="#">Navbar Link</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Sidebar that contains more info  -->
+    <ul id="slide-out" class="sidenav sidenav-fixed">
+    </ul>
+
+    <!-- Container for Map -->
+    <div id="map"></div>
+
+    <!-- Javascript -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+    {% block body %}{% endblock %}
+
+    <script async defer
+    src="//maps.googleapis.com/maps/api/js?key={{gmaps_token}}&callback=initMap"
+    type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  </body>
+</html>

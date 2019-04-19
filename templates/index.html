@@ -1,310 +1,261 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
-    <meta charset="utf-8">
-    <title>NYC Housing Info</title>
+{% extends "map.html" %}
+{% block body %}
+<!-- Map functionalities in JavaScript -->
+<script>
 
-    <!-- Compiled and minified CSS -->
-    <style>
-    #map {
-      height: 94%;
-    }
-    /* Optional: Makes the sample page fill the window. */
-    html, body {
-      height: 100%;
-      margin: 0;
-      padding: 0;
-    }
+// Create sidebar object
+$(document).ready(function(){
+  $('.sidenav').sidenav();
+});
 
-    .sidenav-overlay {
-      opacity: 0;
-    }
-    </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-  </head>
-  <body>
-    <!-- Header/Navbar (will use links to help navigate btw more upcoming features) -->
-    <nav class="light-blue lighten-1" role="navigation">
-      <div class="nav-wrapper container"><a id="logo-container" href="#" class="brand-logo">Logo</a>
-        <ul class="right hide-on-med-and-down">
-          <li><a href="#">Navbar Link</a></li>
-        </ul>
-      </div>
-    </nav>
+var map;
+var violationMarkersOnMap = [];
+var unitMarkersOnMap = [];
+var defaultMapPosition = {lat: 40.713054, long: -74.007228};
+var defaultZoom = 10.8;
+var onPolygon = false;
+var icons = {
+  building: 'https://img.icons8.com/color/48/000000/city.png',
+  violation: 'https://img.icons8.com/color/48/000000/error.png'
+};
 
-    <!-- Hidden sidebar that will contain more info about affordable units -->
-    <ul id="slide-out" class="sidenav sidenav-fixed">
-    </ul>
+document.getElementById("map").onclick = function() {
+  if (onPolygon == true) {
+    onPolygon = false;
+    resetMap();
+  } else {
+    onPolygon = true;
+  }
+}
 
-    <!-- Container for Map -->
-    <div id="map"></div>
+function initMap() {
 
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long),
+    zoom: defaultZoom
+  });
 
-    <!----- BEGIN JAVASCRIPT CODE ---->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-    <!-- Map functionalities in JavaScript -->
-    <script>
-    // Create sidebar object
-    $(document).ready(function(){
-      $('.sidenav').sidenav();
-    });
+  // coordinates of all neighborhoods
+  var polygons = {{ polygons | safe }}
 
-    var map;
-    var violationMarkersOnMap = [];
-    var unitMarkersOnMap = [];
-    var defaultMapPosition = {lat: 40.713054, long: -74.007228};
-    var defaultZoom = 10.8;
-    var onPolygon = false;
-    var icons = {
-      building: 'https://img.icons8.com/color/48/000000/city.png',
-      violation: 'https://img.icons8.com/color/48/000000/error.png'
-    };
+  // all affordable units
+  var units = {{ affordable_units | safe }};
 
-    document.getElementById("map").onclick = function() {
-      if (onPolygon == true) {
-        onPolygon = false;
-        resetMap();
-      } else {
-        onPolygon = true;
+  // Define the LatLng coordinates for one neighborhood's path(s).
+  {% for ntaname, neighborhood_coords in polygons.items() %}
+    var ntacode = "{{ neighborhoods[ntaname] | safe }}";
+    var ntaname = "{{ ntaname | safe }}";
+    var ntaViolations = {{ violations | safe }};
+
+    var coords = {{neighborhood_coords | safe}};
+
+    // go through each polygon associated with NTA
+    for (var p = 0; p < coords.length; p++) {
+
+      var all_coords = [];
+      var bounds = new google.maps.LatLngBounds();
+
+      // each coordinate in polygon
+      for (var i = 0; i < coords[p].length; i++) {
+        all_coords.push({lat: parseFloat(coords[p][i][0]), lng: parseFloat(coords[p][i][1])});
+        bounds.extend(all_coords[i]);
       }
-    }
 
-    function initMap() {
-
-      map = new google.maps.Map(document.getElementById('map'), {
-        center: new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long),
-        zoom: defaultZoom
+      // create neighborhood polygon
+      var polygon_shape = new google.maps.Polygon({
+        paths: all_coords,
+        strokeColor: '#a8a8a8',
+        strokeOpacity: 0,
+        strokeWeight: 2,
+        fillColor: '#a8a8a8',
+        fillOpacity: 0,
+        ntacode: ntacode,
+        ntaname: ntaname,
+        ntaunits: getAffordableUnitsInNta(ntacode, units),
+        bounds: bounds,
+        violations: getViolationsinNta(ntaViolations, ntaname)
       });
 
-      // coordinates of all neighborhoods
-      var polygons = {{ polygons | safe }}
-
-      // all affordable units
-      var units = {{ affordable_units | safe }};
-
-      // Define the LatLng coordinates for one neighborhood's path.
-      {% for ntaname, neighborhood_coords in polygons.items() %}
-        var ntacode = "{{ neighborhoods[ntaname] | safe }}";
-        var ntaname = "{{ ntaname | safe }}";
-        var ntaViolations = {{ violations | safe }};
-
-        var coords = {{neighborhood_coords | safe}};
-
-        // go through each polygon associated with NTA
-        for (var p = 0; p < coords.length; p++) {
-
-          var all_coords = [];
-          var bounds = new google.maps.LatLngBounds();
-
-          // each coordinate in polygon
-          for (var i = 0; i < coords[p].length; i++) {
-            all_coords.push({lat: parseFloat(coords[p][i][0]), lng: parseFloat(coords[p][i][1])});
-            bounds.extend(all_coords[i]);
-          }
-
-          // create neighborhood polygon
-          var polygon_shape = new google.maps.Polygon({
-            paths: all_coords,
-            strokeColor: '#a8a8a8',
-            strokeOpacity: 0,
-            strokeWeight: 2,
-            fillColor: '#a8a8a8',
-            fillOpacity: 0,
-            ntacode: ntacode,
-            ntaname: ntaname,
-            ntaunits: getAffordableUnitsInNta(ntacode, units),
-            bounds: bounds,
-            violations: getViolationsinNta(ntaViolations, ntaname)
-          });
-
-          // creating basic colormap based on affordable units in neighborhoods
-          if (polygon_shape.ntaunits["Total Affordable Units"] == 0) {
-            polygon_shape.fillOpacity = 0.4;
-          } else {
-            polygon_shape.strokeColor = '#f44542';
-            polygon_shape.strokeOpacity = 0.5;
-            polygon_shape.fillColor = '#f44542';
-            polygon_shape.fillOpacity = 0.4;
-          }
-
-          // add polygon to map and add listenier
-          polygon_shape.setMap(map);
-
-          polygon_shape.addListener('click', function(e) {
-            zoomIntoPolygon(e, this, map);
-            adjustSideBar(e, this);
-          });
-
-        }
-
-      {% endfor %}
-    }
-
-    function zoomIntoPolygon(event, polygon, map) {
-      map.fitBounds(polygon.bounds);
-
-      showViolationOnMap(polygon, map);
-      showUnitsOnMap(polygon, map);
-    }
-
-    function showViolationOnMap(polygon, map) {
-      for (var i = 0; i < polygon.violations["A"].length; i++) {
-        var marker = new google.maps.Marker({
-          position: {lat: parseFloat(polygon.violations["A"][i].latitude),
-                      lng: parseFloat(polygon.violations["A"][i].longitude)},
-          map: map,
-          icon: icons["violation"],
-          title: 'A'
-        });
-
-        violationMarkersOnMap.push(marker);
+      // creating basic colormap based on affordable units in neighborhoods
+      if (polygon_shape.ntaunits["Total Affordable Units"] == 0) {
+        polygon_shape.fillOpacity = 0.4;
+      } else {
+        polygon_shape.strokeColor = '#f44542';
+        polygon_shape.strokeOpacity = 0.5;
+        polygon_shape.fillColor = '#f44542';
+        polygon_shape.fillOpacity = 0.4;
       }
 
-      for (var i = 0; i < polygon.violations["B"].length; i++) {
-        var marker = new google.maps.Marker({
-          position: {lat: parseFloat(polygon.violations["B"][i].latitude),
-                      lng: parseFloat(polygon.violations["B"][i].longitude)},
-          map: map,
-          icon: icons["violation"],
-          title: 'B'
-        });
+      // add polygon to map and add listenier
+      polygon_shape.setMap(map);
 
-        violationMarkersOnMap.push(marker);
-      }
+      polygon_shape.addListener('click', function(e) {
+        zoomIntoPolygon(e, this, map);
+        adjustSideBar(e, this);
+      });
 
-      for (var i = 0; i < polygon.violations["C"].length; i++) {
-        var marker = new google.maps.Marker({
-          position: {lat: parseFloat(polygon.violations["C"][i].latitude),
-                      lng: parseFloat(polygon.violations["C"][i].longitude)},
-          map: map,
-          icon: icons["violation"],
-          title: 'C'
-        });
-
-        violationMarkersOnMap.push(marker);
-      }
     }
 
-    function showUnitsOnMap(polygon, map) {
-      for (var i = 0; i < polygon.ntaunits["Unit Coordinates"].length; i++) {
-        var marker = new google.maps.Marker({
-          position: {lat: parseFloat(polygon.ntaunits["Unit Coordinates"][i].lat),
-                      lng: parseFloat(polygon.ntaunits["Unit Coordinates"][i].long)},
-          map: map,
-          icon: icons["building"],
-        });
-        unitMarkersOnMap.push(marker);
+  {% endfor %}
+}
+
+function zoomIntoPolygon(event, polygon, map) {
+  map.fitBounds(polygon.bounds);
+
+  showViolationOnMap(polygon, map);
+  showUnitsOnMap(polygon, map);
+}
+
+function showViolationOnMap(polygon, map) {
+  for (var i = 0; i < polygon.violations["A"].length; i++) {
+    var marker = new google.maps.Marker({
+      position: {lat: parseFloat(polygon.violations["A"][i].latitude),
+                  lng: parseFloat(polygon.violations["A"][i].longitude)},
+      map: map,
+      icon: icons["violation"],
+      title: 'A'
+    });
+
+    violationMarkersOnMap.push(marker);
+  }
+
+  for (var i = 0; i < polygon.violations["B"].length; i++) {
+    var marker = new google.maps.Marker({
+      position: {lat: parseFloat(polygon.violations["B"][i].latitude),
+                  lng: parseFloat(polygon.violations["B"][i].longitude)},
+      map: map,
+      icon: icons["violation"],
+      title: 'B'
+    });
+
+    violationMarkersOnMap.push(marker);
+  }
+
+  for (var i = 0; i < polygon.violations["C"].length; i++) {
+    var marker = new google.maps.Marker({
+      position: {lat: parseFloat(polygon.violations["C"][i].latitude),
+                  lng: parseFloat(polygon.violations["C"][i].longitude)},
+      map: map,
+      icon: icons["violation"],
+      title: 'C'
+    });
+
+    violationMarkersOnMap.push(marker);
+  }
+}
+
+function showUnitsOnMap(polygon, map) {
+  for (var i = 0; i < polygon.ntaunits["Unit Coordinates"].length; i++) {
+    var marker = new google.maps.Marker({
+      position: {lat: parseFloat(polygon.ntaunits["Unit Coordinates"][i].lat),
+                  lng: parseFloat(polygon.ntaunits["Unit Coordinates"][i].long)},
+      map: map,
+      icon: icons["building"],
+    });
+    unitMarkersOnMap.push(marker);
+  }
+}
+
+// open sidebar containing nta information and adjust map width
+function adjustSideBar(event, polygon) {
+  $('.sidenav-fixed').empty();
+
+  var ntaInfo = '<div class="container">' +
+                      '<h4>' + polygon.ntaname + "</br>" + polygon.ntacode + "</h4>";
+  var unitInfo = "<h6>Low Income Units: " + polygon.ntaunits["Low Income Units"] +
+                      "</br>Very Low Income Units: " + polygon.ntaunits['Very Low Income Units'] +
+                      "</br>Extremely Low Income Units: " + polygon.ntaunits['Extremely Low Income Units'] + "</h6>";
+
+  var violationInfo = "<h6>Class A Violations: " + polygon.violations["A"].length +
+                      "</br>Class B Violations: " + polygon.violations["B"].length +
+                      "</br>Class C Violations: " + polygon.violations["C"].length + "</h6></div>"
+
+  $('.sidenav').append(ntaInfo + unitInfo + violationInfo);
+  $('.sidenav').sidenav('open');
+
+  var sidenavTranslate = $('.sidenav').css('transform');
+
+  var width = $('.sidenav').width();
+  var parentWidth = $('.sidenav').offsetParent().width();
+  var newMapWidth = 100 - 100*width/parentWidth;
+
+  $('#map').width(newMapWidth.toString() + "%");
+  $('#map').css("right", 0);
+  $('#map').css("position", "fixed");
+}
+
+function getAffordableUnitsInNta(ntacode, units) {
+  /*
+    Parameter: String, Array []
+    NTA Code, array containing affordable units in all NTAs
+
+    Return: Dictionary
+    Dictionary containing number of low, very low, and extremely low income units of nta
+  */
+
+  var dict = new Object();
+  dict["NTA Code"] = ntacode;
+  dict["Low Income Units"] = 0;
+  dict["Extremely Low Income Units"] = 0;
+  dict["Very Low Income Units"] = 0;
+  dict["Unit Coordinates"] = [];
+
+  for (var i = 0; i < units.length; i++) {
+    if (units[i].neighborhood_tabulation_area === ntacode && units[i].neighborhood_tabulation_area != null) {
+      dict["Low Income Units"] += parseInt(units[i].low_income_units);
+      dict["Very Income Units"] += parseInt(units[i].very_low_income_units);
+      dict["Extremely Low Income Units"] += parseInt(units[i].extremely_low_income_units);
+      dict["Unit Coordinates"].push({lat: units[i].latitude, long: units[i].longitude});
+    }
+  }
+
+  dict["Total Affordable Units"] = dict["Low Income Units"] + dict["Extremely Low Income Units"] + dict["Very Low Income Units"];
+  return dict;
+}
+
+function getViolationsinNta(violations, ntaname) {
+  /*
+    Parameter: Array of JSON objects, toString
+
+    Return: Dictionary
+    Dictionary containing housing violations in NTA by class (A, B, or C)
+  */
+
+  var dict = new Object();
+  dict["ntaname"] = ntaname;
+  dict["A"] = [];
+  dict["B"] = [];
+  dict["C"] = [];
+
+  for (var i = 0; i < violations.length; i++) {
+    if (violations[i].nta === ntaname) {
+      if (violations[i].class === "A") {
+        dict["A"].push(violations[i]);
+      } else if (violations[i].class === "B") {
+        dict["B"].push(violations[i]);
+      } else {
+        dict["C"].push(violations[i]);
       }
     }
+  }
 
-    // open sidebar containing nta information and adjust map width
-    function adjustSideBar(event, polygon) {
-      $('.sidenav-fixed').empty();
+  return dict;
+}
 
-      var ntaInfo = '<div class="container">' +
-                          '<h4>' + polygon.ntaname + "</br>" + polygon.ntacode + "</h4>";
-      var unitInfo = "<h6>Low Income Units: " + polygon.ntaunits["Low Income Units"] +
-                          "</br>Very Low Income Units: " + polygon.ntaunits['Very Low Income Units'] +
-                          "</br>Extremely Low Income Units: " + polygon.ntaunits['Extremely Low Income Units'] + "</h6>";
+function resetMap() {
+  $('.sidenav-fixed').empty();
 
-      var violationInfo = "<h6>Class A Violations: " + polygon.violations["A"].length +
-                          "</br>Class B Violations: " + polygon.violations["B"].length +
-                          "</br>Class C Violations: " + polygon.violations["C"].length + "</h6></div>"
+  for (var i = 0; i < violationMarkersOnMap.length; i++) {
+    violationMarkersOnMap[i].setMap(null);
+  }
 
-      $('.sidenav').append(ntaInfo + unitInfo + violationInfo);
-      $('.sidenav').sidenav('open');
+  for (var i = 0; i < unitMarkersOnMap.length; i++) {
+    unitMarkersOnMap[i].setMap(null);
+  }
 
-      var sidenavTranslate = $('.sidenav').css('transform');
+  map.setCenter(new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long));
+  map.setZoom(defaultZoom);
+}
 
-      var width = $('.sidenav').width();
-      var parentWidth = $('.sidenav').offsetParent().width();
-      var newMapWidth = 100 - 100*width/parentWidth;
-
-      $('#map').width(newMapWidth.toString() + "%");
-      $('#map').css("right", 0);
-      $('#map').css("position", "fixed");
-    }
-
-    function getAffordableUnitsInNta(ntacode, units) {
-      /*
-        Parameter: String, Array []
-        NTA Code, array containing affordable units in all NTAs
-
-        Return: Dictionary
-        Dictionary containing number of low, very low, and extremely low income units of nta
-      */
-
-      var dict = new Object();
-      dict["NTA Code"] = ntacode;
-      dict["Low Income Units"] = 0;
-      dict["Extremely Low Income Units"] = 0;
-      dict["Very Low Income Units"] = 0;
-      dict["Unit Coordinates"] = [];
-
-      for (var i = 0; i < units.length; i++) {
-        if (units[i].neighborhood_tabulation_area === ntacode && units[i].neighborhood_tabulation_area != null) {
-          dict["Low Income Units"] += parseInt(units[i].low_income_units);
-          dict["Very Income Units"] += parseInt(units[i].very_low_income_units);
-          dict["Extremely Low Income Units"] += parseInt(units[i].extremely_low_income_units);
-          dict["Unit Coordinates"].push({lat: units[i].latitude, long: units[i].longitude});
-        }
-      }
-
-      dict["Total Affordable Units"] = dict["Low Income Units"] + dict["Extremely Low Income Units"] + dict["Very Low Income Units"];
-      return dict;
-    }
-
-    function getViolationsinNta(violations, ntaname) {
-      /*
-        Parameter: Array of JSON objects, toString
-
-        Return: Dictionary
-        Dictionary containing housing violations in NTA by class (A, B, or C)
-      */
-
-      var dict = new Object();
-      dict["ntaname"] = ntaname;
-      dict["A"] = [];
-      dict["B"] = [];
-      dict["C"] = [];
-
-      for (var i = 0; i < violations.length; i++) {
-        if (violations[i].nta === ntaname) {
-          if (violations[i].class === "A") {
-            dict["A"].push(violations[i]);
-          } else if (violations[i].class === "B") {
-            dict["B"].push(violations[i]);
-          } else {
-            dict["C"].push(violations[i]);
-          }
-        }
-      }
-
-      return dict;
-    }
-
-    function resetMap() {
-      $('.sidenav-fixed').empty();
-
-      for (var i = 0; i < violationMarkersOnMap.length; i++) {
-        violationMarkersOnMap[i].setMap(null);
-      }
-
-      for (var i = 0; i < unitMarkersOnMap.length; i++) {
-        unitMarkersOnMap[i].setMap(null);
-      }
-
-      map.setCenter(new google.maps.LatLng(defaultMapPosition.lat, defaultMapPosition.long));
-      map.setZoom(defaultZoom);
-    }
-
-    </script>
-    <script async defer
-    src="//maps.googleapis.com/maps/api/js?key={{gmaps_token}}&callback=initMap"
-    type="text/javascript"></script>
-
-    <!-- Compiled and minified JavaScript -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
-  </body>
-</html>
+</script>
+{% endblock %}
